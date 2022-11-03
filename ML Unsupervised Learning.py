@@ -55,7 +55,22 @@ plt.axis('equal');
 
 # The dark points are the projected version.
 # We see that the most important features of data are saved, and we have compressed the data by 50%.
+# This is the puissance of "dimensionality reduction" : By approximating a data set in a lower dimension,
+# we have an easier time visualizing it or fitting complicated models to the data.
 
+
+
+# Application of PCA to Digits
+# Let's try the application of PCA on digits data (the same data points):
+from sklearn.datasets import load_digits
+digits = load_digits()
+X = digits.data
+y = digits.target
+
+pca = PCA(2)  # project from 64 to 2 dimensions
+Xproj = pca.fit_transform(X)
+print(X.shape)
+print(Xproj.shape)
 
 
 

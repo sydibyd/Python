@@ -72,5 +72,8 @@ Xproj = pca.fit_transform(X)
 print(X.shape)
 print(Xproj.shape)
 
+plt.scatter(Xproj[:, 0], Xproj[:, 1], c=y, edgecolor='none', alpha=0.5,
+            cmap=plt.cm.get_cmap('nipy_spectral', 10))
+plt.colorbar();
 
 

@@ -76,4 +76,8 @@ plt.scatter(Xproj[:, 0], Xproj[:, 1], c=y, edgecolor='none', alpha=0.5,
             cmap=plt.cm.get_cmap('nipy_spectral', 10))
 plt.colorbar();
 
+# It is easier to look at the relationships between the digits.
+# The optimal stretch and rotation in finded in 64-dimentional space,
+# that permit to see the layout of digits with no reference to  the labels.
+
 

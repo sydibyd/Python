@@ -53,6 +53,8 @@ plt.plot(X[:, 0], X[:, 1], 'o', alpha=0.2)
 plt.plot(X_new[:, 0], X_new[:, 1], 'ob', alpha=0.8)
 plt.axis('equal');
 
+# The dark points are the projected version.
+# We see that the most important features of data are saved, and we have compressed the data by 50%.
 
 
 

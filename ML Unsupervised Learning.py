@@ -1,4 +1,4 @@
-# Test Unsupervised Learning algorithms.
+# Test Unsupervised Learning algorithms
 # Editor: Saeis Sharify
 # Date: 01/2018
 #

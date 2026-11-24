@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Flatmates Bill</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,750&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* Layout: inputs (bill + flatmates) on the left, a live printed-statement preview on the right; stacks at phone width. */
+:root {
+  --bg: #eef2f1;
+  --surface: #ffffff;
+  --ink: #15201e;
+  --muted: #5b6b68;
+  --line: #d3dcda;
+  --accent: #0d6b5a;
+  --accent-soft: #d8ece7;
+  --warn: #a2461b;
+  --paper: #fbfcfc;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --bar-1: #0d6b5a; --bar-2: #c98a1b; --bar-3: #3c64b1; --bar-4: #a2461b; --bar-5: #6b4fa0; --bar-6: #2f8a9e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1514; --surface: #17201e; --ink: #e5eeec; --muted: #93a5a1; --line: #2a3735;
+    --accent: #4cc3a8; --accent-soft: #173a33; --warn: #e88a5c; --paper: #1b2523;
+    --bar-1: #4cc3a8; --bar-2: #e2b04f; --bar-3: #7f9fe6; --bar-4: #e88a5c; --bar-5: #b49ae0; --bar-6: #6cc4d6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1514; --surface: #17201e; --ink: #e5eeec; --muted: #93a5a1; --line: #2a3735;
+  --accent: #4cc3a8; --accent-soft: #173a33; --warn: #e88a5c; --paper: #1b2523;
+  --bar-1: #4cc3a8; --bar-2: #e2b04f; --bar-3: #7f9fe6; --bar-4: #e88a5c; --bar-5: #b49ae0; --bar-6: #6cc4d6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 24px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--display); font-weight: 750; font-size: clamp(1.9rem, 4vw, 2.6rem); line-height: 1.05; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.panel + .panel { margin-top: 0; }
+.col { display: grid; gap: 20px; min-width: 0; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 1.15rem; margin: 0; }
+.eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 600; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+label { display: grid; gap: 5px; font-size: 0.82rem; font-weight: 500; color: var(--muted); min-width: 0; }
+input, select {
+  font: inherit; font-size: 0.95rem; color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; width: 100%; min-width: 0;
+}
+input.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[aria-invalid="true"] { border-color: var(--warn); }
+.amount-wrap { position: relative; }
+.amount-wrap span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-family: var(--mono); color: var(--muted); pointer-events: none; }
+.amount-wrap input { padding-left: 34px; }
+
+.mates { display: grid; gap: 10px; }
+.mate { display: grid; grid-template-columns: 10px minmax(0, 1.6fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.swatch { width: 10px; height: 38px; border-radius: 3px; }
+.icon-btn { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; width: 38px; height: 38px; cursor: pointer; font-size: 1.1rem; line-height: 1; }
+.icon-btn:hover:not(:disabled) { color: var(--warn); border-color: var(--warn); }
+.icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn { font: inherit; font-weight: 600; font-size: 0.92rem; border-radius: 7px; padding: 10px 16px; cursor: pointer; border: 1px solid var(--accent); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.ghost:hover { background: var(--accent-soft); }
+.btn.primary { background: var(--accent); color: var(--surface); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
+.err { color: var(--warn); font-size: 0.85rem; margin: 0; }
+.formula { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); background: var(--bg); border-radius: 6px; padding: 10px 12px; overflow-x: auto; white-space: nowrap; }
+
+/* Statement preview */
+.statement { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 26px 24px; display: grid; gap: 20px; box-shadow: 0 1px 0 var(--line), 0 12px 30px -18px rgba(0,0,0,0.25); min-width: 0; }
+.st-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
+.st-title { font-family: var(--display); font-weight: 750; font-size: 1.5rem; margin: 0; line-height: 1.1; }
+.st-meta { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); text-align: right; display: grid; gap: 2px; }
+.totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.totals div { display: grid; gap: 2px; }
+.totals strong { font-family: var(--mono); font-weight: 500; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) { .totals { grid-template-columns: 1fr 1fr; } }
+.stack { display: flex; height: 14px; border-radius: 3px; overflow: hidden; background: var(--line); }
+.stack span { display: block; height: 100%; transition: width 0.3s ease; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; padding: 0 8px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 10px 8px; border-bottom: 1px dashed var(--line); vertical-align: middle; }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.name { font-weight: 600; }
+td.name i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+tfoot td { border-bottom: none; border-top: 2px solid var(--ink); font-weight: 600; }
+.st-foot { font-size: 0.78rem; color: var(--muted); margin: 0; }
+.toast { font-size: 0.85rem; color: var(--accent); min-height: 1.3em; margin: 0; }
+.toast.bad { color: var(--warn); }
+@media (prefers-reduced-motion: reduce) { .stack span { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Flatmates Bill</h1>
+      <p class="lede">Enter a bill and how many days each flatmate stayed during that period. Each person pays in proportion to their days in the house, and you can download the split as a PDF report.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <form class="panel" id="billForm" novalidate>
+        <div>
+          <div class="eyebrow">Bill</div>
+          <h2>What was charged</h2>
+        </div>
+        <div class="row">
+          <label for="amount">Amount
+            <span class="amount-wrap"><span id="curSym">$</span><input class="num" id="amount" type="number" min="0" step="0.01" inputmode="decimal" required></span>
+          </label>
+          <label for="currency">Currency
+            <select id="currency">
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="CAD">CAD ($)</option>
+              <option value="AUD">AUD ($)</option>
+              <option value="INR">INR (₹)</option>
+              <option value="CHF">CHF</option>
+            </select>
+          </label>
+        </div>
+        <label for="period">Period
+          <input id="period" type="text" placeholder="e.g. March 2026" maxlength="60" required>
+        </label>
+      </form>
+
+      <section class="panel" aria-labelledby="matesTitle">
+        <div>
+          <div class="eyebrow">Flatmates</div>
+          <h2 id="matesTitle">Who stayed, and for how long</h2>
+        </div>
+        <div class="mates" id="mates"></div>
+        <div class="actions">
+          <button type="button" class="btn ghost" id="addMate">Add flatmate</button>
+          <button type="button" class="btn ghost" id="loadExample">Load example</button>
+        </div>
+        <p class="err" id="formErr" hidden></p>
+        <div class="formula">pays = bill amount × (days in house ÷ total days of all flatmates)</div>
+      </section>
+    </div>
+
+    <section class="col" aria-labelledby="stTitle">
+      <article class="statement" id="statement">
+        <div class="st-head">
+          <div>
+            <div class="eyebrow">Shared bill report</div>
+            <p class="st-title" id="stTitle">Period</p>
+          </div>
+          <div class="st-meta">
+            <span id="stDate"></span>
+            <span id="stCount"></span>
+          </div>
+        </div>
+        <div class="totals">
+          <div><span class="eyebrow">Bill amount</span><strong id="tAmount">0.00</strong></div>
+          <div><span class="eyebrow">Total days</span><strong id="tDays">0</strong></div>
+          <div><span class="eyebrow">Cost per day</span><strong id="tPerDay">0.00</strong></div>
+        </div>
+        <div class="stack" id="stack" role="img" aria-label="Share of the bill by flatmate"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Flatmate</th><th class="n">Days</th><th class="n">Share</th><th class="n">Pays</th></tr></thead>
+            <tbody id="rows"></tbody>
+            <tfoot><tr><td>Total</td><td class="n" id="fDays">0</td><td class="n">100%</td><td class="n" id="fPays">0.00</td></tr></tfoot>
+          </table>
+        </div>
+        <p class="st-foot">Amounts are rounded to the cent; any leftover cent goes to the flatmate with the most days, so the shares always add up to the bill.</p>
+      </article>
+      <div class="actions">
+        <label for="filename" style="flex:1 1 220px">PDF file name
+          <input id="filename" type="text" maxlength="80">
+        </label>
+        <button type="button" class="btn primary" id="genPdf" style="align-self:end">Download PDF report</button>
+      </div>
+      <p class="toast" id="toast" role="status"></p>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const BAR = n => `var(--bar-${(n % 6) + 1})`;
+  const SYM = { USD: "$", EUR: "€", GBP: "£", CAD: "$", AUD: "$", INR: "₹", CHF: "CHF " };
+  const $ = id => document.getElementById(id);
+  const EXAMPLE = { amount: 120, currency: "USD", period: "March 2026",
+    mates: [{ name: "Saeii", days: 20 }, { name: "Mahi", days: 25 }] };
+
+  /* ---- Domain objects, as in the design ---- */
+  class Bill {
+    constructor(amount, period) { this.amount = amount; this.period = period; }
+  }
+  class Flatmate {
+    constructor(name, daysInHouse) { this.name = name; this.days_in_house = daysInHouse; }
+    pays(bill, flatmates) {
+      const total = flatmates.reduce((s, f) => s + f.days_in_house, 0);
+      return total > 0 ? bill.amount * (this.days_in_house / total) : 0;
+    }
+  }
+  /* Split to cents so shares sum exactly to the bill. */
+  function split(bill, flatmates) {
+    const totalCents = Math.round(bill.amount * 100);
+    const totalDays = flatmates.reduce((s, f) => s + f.days_in_house, 0);
+    if (!totalDays) return flatmates.map(() => 0);
+    const cents = flatmates.map(f => Math.floor(totalCents * f.days_in_house / totalDays));
+    let rest = totalCents - cents.reduce((a, b) => a + b, 0);
+    const order = flatmates.map((f, i) => i).sort((a, b) => flatmates[b].days_in_house - flatmates[a].days_in_house);
+    for (let k = 0; rest > 0; k = (k + 1) % order.length, rest--) cents[order[k]]++;
+    return cents.map(c => c / 100);
+  }
+  class PdfReport {
+    constructor(filename) { this.filename = filename; }
+    generate(flatmates, bill, currency) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const W = doc.internal.pageSize.getWidth();
+      const M = 56;
+      const money = v => `${currency} ${v.toFixed(2)}`;
+      const shares = split(bill, flatmates);
+      const totalDays = flatmates.reduce((s, f) => s + f.days_in_house, 0);
+
+      doc.setFillColor(13, 107, 90); doc.rect(0, 0, W, 8, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(24); doc.setTextColor(21, 32, 30);
+      doc.text("Flatmates Bill", M, 70);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(91, 107, 104);
+      doc.text(`Period: ${bill.period}`, M, 92);
+      doc.text(`Generated ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`, W - M, 92, { align: "right" });
+      doc.setDrawColor(21, 32, 30); doc.setLineWidth(1.5); doc.line(M, 106, W - M, 106);
+
+      doc.setFontSize(10); doc.text("BILL AMOUNT", M, 134); doc.text("TOTAL DAYS", M + 170, 134); doc.text("COST PER DAY", M + 320, 134);
+      doc.setFont("courier", "bold"); doc.setFontSize(15); doc.setTextColor(21, 32, 30);
+      doc.text(money(bill.amount), M, 154); doc.text(String(totalDays), M + 170, 154);
+      doc.text(totalDays ? money(bill.amount / totalDays) : "-", M + 320, 154);
+
+      let y = 200;
+      const cols = [M, W - M - 230, W - M - 130, W - M];
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(91, 107, 104);
+      doc.text("FLATMATE", cols[0], y); doc.text("DAYS", cols[1], y, { align: "right" });
+      doc.text("SHARE", cols[2], y, { align: "right" }); doc.text("PAYS", cols[3], y, { align: "right" });
+      doc.setDrawColor(211, 220, 218); doc.setLineWidth(0.8); doc.line(M, y + 8, W - M, y + 8);
+      y += 30;
+      flatmates.forEach((f, i) => {
+        if (y > 760) { doc.addPage(); y = 70; }
+        doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(21, 32, 30);
+        doc.text(doc.splitTextToSize(f.name, cols[1] - M - 70)[0], cols[0], y);
+        doc.setFont("courier", "normal");
+        doc.text(String(f.days_in_house), cols[1], y, { align: "right" });
+        doc.text(`${(totalDays ? f.days_in_house / totalDays * 100 : 0).toFixed(1)}%`, cols[2], y, { align: "right" });
+        doc.setFont("courier", "bold");
+        doc.text(money(shares[i]), cols[3], y, { align: "right" });
+        doc.setLineDashPattern([2, 2], 0); doc.line(M, y + 10, W - M, y + 10); doc.setLineDashPattern([], 0);
+        y += 30;
+      });
+      doc.setDrawColor(21, 32, 30); doc.setLineWidth(1.5); doc.line(M, y - 8, W - M, y - 8);
+      doc.setFont("helvetica", "bold"); doc.text("Total", M, y + 10);
+      doc.setFont("courier", "bold");
+      doc.text(String(totalDays), cols[1], y + 10, { align: "right" });
+      doc.text("100%", cols[2], y + 10, { align: "right" });
+      doc.text(money(shares.reduce((a, b) => a + b, 0)), cols[3], y + 10, { align: "right" });
+
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(91, 107, 104);
+      doc.text("Each flatmate pays the bill amount multiplied by their days in the house divided by the total days of all flatmates.", M, y + 50, { maxWidth: W - 2 * M });
+      return doc.output("blob");
+    }
+  }
+
+  /* ---- State & UI ---- */
+  let state = load();
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem("flatmates-bill-v2") || "null"); if (s && Array.isArray(s.mates) && s.mates.length) return s; } catch (e) {}
+    return structuredClone(EXAMPLE);
+  }
+  function persist() { try { localStorage.setItem("flatmates-bill-v2", JSON.stringify(state)); } catch (e) {} }
+
+  function renderMates() {
+    const box = $("mates"); box.textContent = "";
+    state.mates.forEach((m, i) => {
+      const row = document.createElement("div"); row.className = "mate";
+      row.innerHTML = `<span class="swatch" style="background:${BAR(i)}"></span>
+        <label for="name-${i}">Name<input id="name-${i}" type="text" maxlength="40"></label>
+        <label for="days-${i}">Days in house<input class="num" id="days-${i}" type="number" min="0" max="366" step="1" inputmode="numeric"></label>
+        <button type="button" class="icon-btn" aria-label="Remove flatmate">×</button>`;
+      const n = row.querySelector("input[type=text]"), d = row.querySelector("input[type=number]");
+      n.value = m.name; d.value = m.days;
+      n.addEventListener("input", () => { m.name = n.value; update(); });
+      d.addEventListener("input", () => { m.days = d.value === "" ? "" : Number(d.value); update(); });
+      const rm = row.querySelector("button");
+      rm.disabled = state.mates.length <= 2;
+      rm.addEventListener("click", () => { state.mates.splice(i, 1); renderMates(); update(); });
+      box.appendChild(row);
+    });
+  }
+
+  function validate() {
+    const errs = [];
+    const amt = Number(state.amount);
+    $("amount").setAttribute("aria-invalid", !(amt > 0));
+    if (!(amt > 0)) errs.push("Enter a bill amount greater than zero.");
+    if (!String(state.period).trim()) errs.push("Enter the billing period.");
+    state.mates.forEach((m, i) => {
+      const badDays = !(Number.isInteger(m.days) && m.days >= 0 && m.days <= 366);
+      $(`days-${i}`)?.setAttribute("aria-invalid", badDays);
+      $(`name-${i}`)?.setAttribute("aria-invalid", !String(m.name).trim());
+    });
+    if (state.mates.some(m => !String(m.name).trim())) errs.push("Give every flatmate a name.");
+    if (state.mates.some(m => !(Number.isInteger(m.days) && m.days >= 0 && m.days <= 366))) errs.push("Days in house must be a whole number from 0 to 366.");
+    else if (state.mates.reduce((s, m) => s + m.days, 0) === 0) errs.push("At least one flatmate needs more than zero days.");
+    return errs;
+  }
+
+  function current() {
+    const bill = new Bill(Number(state.amount) || 0, String(state.period).trim());
+    const mates = state.mates.map(m => new Flatmate(String(m.name).trim() || "Unnamed", Number.isInteger(m.days) && m.days > 0 ? m.days : 0));
+    return { bill, mates };
+  }
+
+  function update() {
+    persist();
+    const errs = validate();
+    $("formErr").hidden = !errs.length; $("formErr").textContent = errs.join(" ");
+    $("genPdf").disabled = errs.length > 0;
+    const sym = SYM[state.currency] || "";
+    $("curSym").textContent = sym.trim();
+    const fmt = v => sym + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const { bill, mates } = current();
+    const shares = split(bill, mates);
+    const totalDays = mates.reduce((s, f) => s + f.days_in_house, 0);
+
+    $("stTitle").textContent = bill.period || "Period not set";
+    $("stDate").textContent = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    $("stCount").textContent = `${mates.length} flatmates`;
+    $("tAmount").textContent = fmt(bill.amount);
+    $("tDays").textContent = totalDays;
+    $("tPerDay").textContent = totalDays ? fmt(bill.amount / totalDays) : "–";
+
+    const stack = $("stack"); stack.textContent = "";
+    const rows = $("rows"); rows.textContent = "";
+    mates.forEach((f, i) => {
+      const pct = totalDays ? f.days_in_house / totalDays * 100 : 0;
+      const seg = document.createElement("span"); seg.style.width = pct + "%"; seg.style.background = BAR(i); seg.title = `${f.name}: ${pct.toFixed(1)}%`;
+      stack.appendChild(seg);
+      const tr = document.createElement("tr");
+      const tdN = document.createElement("td"); tdN.className = "name";
+      const dot = document.createElement("i"); dot.style.background = BAR(i);
+      tdN.append(dot, document.createTextNode(f.name));
+      tr.appendChild(tdN);
+      [String(f.days_in_house), pct.toFixed(1) + "%", fmt(shares[i])].forEach(t => {
+        const td = document.createElement("td"); td.className = "n"; td.textContent = t; tr.appendChild(td);
+      });
+      rows.appendChild(tr);
+    });
+    $("fDays").textContent = totalDays;
+    $("fPays").textContent = fmt(shares.reduce((a, b) => a + b, 0));
+    if (!$("filename").dataset.touched) $("filename").value = defaultName();
+  }
+  function defaultName() {
+    const p = String(state.period).trim().replace(/[^\w\- ]+/g, "").replace(/\s+/g, "-").toLowerCase();
+    return `flatmates-bill${p ? "-" + p : ""}.pdf`;
+  }
+
+  function hydrate() {
+    $("amount").value = state.amount; $("currency").value = state.currency || "USD"; $("period").value = state.period;
+    renderMates(); update();
+  }
+
+  $("amount").addEventListener("input", e => { state.amount = e.target.value; update(); });
+  $("currency").addEventListener("change", e => { state.currency = e.target.value; update(); });
+  $("period").addEventListener("input", e => { state.period = e.target.value; update(); });
+  $("billForm").addEventListener("submit", e => e.preventDefault());
+  $("filename").addEventListener("input", e => { e.target.dataset.touched = e.target.value ? "1" : ""; });
+  $("addMate").addEventListener("click", () => {
+    state.mates.push({ name: "", days: 0 }); renderMates(); update();
+    $(`name-${state.mates.length - 1}`).focus();
+  });
+  $("loadExample").addEventListener("click", () => { state = structuredClone(EXAMPLE); delete $("filename").dataset.touched; hydrate(); });
+
+  let downloads = null;
+  const toast = (msg, bad) => { $("toast").textContent = msg; $("toast").classList.toggle("bad", !!bad); };
+  window.claude?.use?.("downloads").then(d => { downloads = d; }).catch(() => {});
+
+  $("genPdf").addEventListener("click", async () => {
+    if (validate().length) return;
+    if (!window.jspdf) { toast("The PDF library didn't load. Check your connection and reload the page.", true); return; }
+    let name = $("filename").value.trim() || defaultName();
+    if (!/\.pdf$/i.test(name)) name += ".pdf";
+    const { bill, mates } = current();
+    const blob = new PdfReport(name).generate(mates, bill, state.currency || "USD");
+    if (!downloads) {
+      // Outside the Claude viewer: plain browser download.
+      try {
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        toast(`Saved ${name}`);
+      } catch (e) { toast("Downloads aren't available in this view.", true); }
+      return;
+    }
+    try {
+      await downloads.save({ filename: name, data: blob });
+      toast(`Saved ${name}`);
+    } catch (e) {
+      const msgs = { declined: "Download cancelled.", rate_limited: "A save prompt is already open. Try again in a moment.", host_unavailable: "This app can't save files. Open the page in a browser to download the PDF." };
+      toast(msgs[e?.code] || "Downloads aren't available in this view.", true);
+    }
+  });
+
+  hydrate();
+})();
+</script>
+
+</body>
+</html>
